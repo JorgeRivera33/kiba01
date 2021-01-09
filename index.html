@@ -158,12 +158,12 @@
             /*agregamos el boton fullscreen*/
             var fulls=this.add.image(705,25,'fulls').setScale(0.7).setAlpha(0.7).setInteractive();
             fulls.on('pointerup',function(){
-                if(a.scale.isFullscreen){
+                if(this.scale.isFullscreen){
                     //button.setFrame(0);
-                    a.scale.stopFullscreen();
+                    this.scale.stopFullscreen();
                 }else{
                     //button.setFrame(1);
-                    a.scale.startFullscreen();
+                    this.scale.startFullscreen();
                 }
             }, this);
 
