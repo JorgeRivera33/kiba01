@@ -1,0 +1,276 @@
+<!doctype html> 
+<html lang="es"> 
+<head> 
+    <meta charset="UTF-8" />
+    <title>Efectos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=yes, maximum-scale=3, minimum-scale=0.1">
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.50.0/dist/phaser.min.js"></script>
+    <style type="text/css">
+        *{margin:0; padding:0; box-sizing:border-box;}
+    </style>
+</head>
+<body>
+    <script type="text/javascript">
+        var player;
+        var stars;
+        var bombs;
+        var platforms;
+        var cursors;
+        var score = 0;
+        var gameOver = false;
+        var scoreText;
+        ///
+        var salto=false;
+        var moverLeft=false;
+        var moverRight=false;
+        var moverDown=false;
+
+        var config = {
+            type: Phaser.AUTO,
+            width: 731,
+            height: 411,
+            scale:{
+                mode: Phaser.Scale.FIT,
+               // parent: 'juego',
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 430 },
+                    debug: false
+                }
+            },
+            input:{
+                activePointers:3
+            },
+             scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        var game = new Phaser.Game(config);
+
+        function preload(){
+            this.load.image('plat','assets/plat.png');
+            this.load.image('fondo','assets/sky2.png');
+            this.load.image('fulls','assets/fulls.png');
+            this.load.image('flecha','assets/flecha.png');
+            this.load.image('botona','assets/btn_a.png');
+            this.load.image('botonb','assets/btn_b.png');
+            this.load.image('botonx','assets/btn_x.png');
+            this.load.image('botony','assets/btn_y.png');
+            this.load.image('ground', 'assets/platform.png');
+            this.load.spritesheet('kiba','assets/Kiba_Sprite_Sheet.png',{frameWidth:40.8,frameHeight:53.25});
+        }
+        function create(){
+            /*Colocamos el fondo*/
+            this.add.image(0,-40,'fondo').setOrigin(0,0);
+
+            /*agregamos las plataformas*/
+            platforms = this.physics.add.staticGroup();
+            platforms.create(400, 360, 'ground').setScale(2).setAlpha(0).refreshBody();
+            platforms.create(0,227,'plat').setOrigin(0,0).refreshBody();
+            platforms.create(255,106,'plat').setOrigin(0,0).refreshBody();
+            platforms.create(540,200,'plat').setOrigin(0,0).refreshBody();
+
+            /*Colocamos el player*/
+            player=this.physics.add.sprite(50,200,'kiba_stance',0);
+            player.setSize(40.8,50);
+            player.setOffset(1,0);
+            player.setCollideWorldBounds(true);
+
+            this.anims.create({
+                key: "stance",
+                repeat: -1,
+                frameRate: 5,
+                frames: this.anims.generateFrameNames('kiba',{start:0,end:5})
+            });
+            this.anims.create({
+                key: "walk",
+                repeat: -1,
+                frameRate: 5,
+                frames: this.anims.generateFrameNames('kiba',{start:6,end:11})
+            });
+            this.anims.create({
+                key: "jump",
+                repeat: -1,
+                frameRate: 5,
+                frames: this.anims.generateFrameNames('kiba',{start:12,end:13})
+            });
+            this.anims.create({
+                key: "caer",
+                repeat: -1,
+                frameRate: 5,
+                frames: this.anims.generateFrameNames('kiba',{start:14,end:15})
+            });
+            this.anims.create({
+                key: "tele",
+                repeat: -1,
+                frameRate: 5,
+                frames: this.anims.generateFrameNames('kiba',{start:16,end:17})
+            });
+            this.anims.create({
+                key: "crounch",
+                repeat: 0,
+                frameRate: 10,
+                frames: this.anims.generateFrameNames('kiba',{start:18,end:20})
+            });
+            player.play('stance');
+
+            /*detectamos el teclado*/
+            cursors = this.input.keyboard.createCursorKeys();
+
+            /*Detectamos la colision con las plataformas*/
+            this.physics.add.collider(player, platforms);
+            //this.physics.add.collider(stars, platforms);
+            //this.physics.add.collider(bombs, platforms);
+
+            /*creamos los controles*/
+            var btn_up=this.add.image(57,326,'flecha').setAlpha(0.7).setScale(0.7).setInteractive();
+            var btn_down=this.add.image(57,380,'flecha').setAngle(180).setAlpha(0.7).setScale(0.7).setInteractive();
+            var btn_left=this.add.image(30,353,'flecha').setAngle(-90).setAlpha(0.7).setScale(0.7).setInteractive();
+            var btn_right=this.add.image(85,353,'flecha').setAngle(90).setAlpha(0.7).setScale(0.7).setInteractive();
+            var btn_a=this.add.image(675,383,'botona').setAlpha(0.7).setScale(0.6).setInteractive();
+            var btn_b=this.add.image(705,353,'botonb').setAlpha(0.7).setScale(0.6).setInteractive();
+            var btn_y=this.add.image(675,322,'botony').setAlpha(0.7).setScale(0.6).setInteractive();
+            var btn_x=this.add.image(643,353,'botonx').setAlpha(0.7).setScale(0.6).setInteractive();
+            /*acciones para los controles*/
+            btn_right.on('pointerdown',function(pointer){moverRight=true;});
+            btn_right.on('pointerup',function(pointer){moverRight=false;});
+            btn_right.on('pointerout', function(event){moverRight=false;});
+            btn_right.on('pointerover', function(event){moverRight=true;moverLeft=false;});
+
+            btn_left.on('pointerdown',function(pointer){moverLeft=true;});
+            btn_left.on('pointerup',function(pointer){moverLeft=false;});
+            btn_left.on('pointerout', function(event){moverLeft=false;});
+            btn_left.on('pointerover', function(event){moverLeft=true;moverRight=false;});
+
+            btn_down.on('pointerdown',function(pointer){moverDown=true;});
+            btn_down.on('pointerup',function(pointer){moverDown=false;});
+            btn_down.on('pointerout', function(event){moverDown=false;});
+            btn_down.on('pointerover', function(event){moverDown=true;});
+
+            btn_y.on('pointerdown',function(pointer){salto=true;});
+
+            /*agregamos el boton fullscreen*/
+            var fulls=this.add.image(705,25,'fulls').setScale(0.7).setAlpha(0.7).setInteractive();
+            fulls.on('pointerup',function(){
+                if(a.scale.isFullscreen){
+                    //button.setFrame(0);
+                    a.scale.stopFullscreen();
+                }else{
+                    //button.setFrame(1);
+                    a.scale.startFullscreen();
+                }
+            }, this);
+
+        }
+
+        //function update(){}
+       // /*
+        function update(){
+            
+            if(player.body.velocity.y<0){
+                console.log("subiendo");
+                player.anims.play('jump');
+                if (cursors.left.isDown || moverLeft){
+                    player.setVelocityX(-160);
+                }else if(cursors.right.isDown || moverRight){
+                    player.setVelocityX(160);
+                }
+            }
+
+            if(player.body.velocity.y>0){
+                console.log("bajando");
+                player.anims.play('caer');
+                if (cursors.left.isDown || moverLeft){
+                    player.setVelocityX(-160);
+                }else if(cursors.right.isDown || moverRight){
+                    player.setVelocityX(160);
+                }
+            }
+
+            if (cursors.up.isDown || salto){
+                if(player.body.touching.down){
+                    console.log("oprimio saltar");
+                    player.setVelocityY(-330);
+                }
+            }
+
+            if(player.body.touching.down && !cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !moverRight && !moverLeft && !moverDown){
+                salto=false;
+                console.log("en reposo para saltar");
+                player.anims.play("stance",true);
+                player.setVelocityX(0);
+            }
+
+            ///////////////////////////////////////
+
+            if (cursors.left.isDown || moverLeft){
+                
+                if(cursors.up.isDown && !player.body.touching.down){
+                    console.log("saltando a la izquierda");
+                    player.anims.play('jump');
+                }else if(cursors.down.isDown){
+                    //console.log("quiere caminar agachado");
+                    //player.setVelocityX(-160);
+                }else if(player.body.touching.down){
+                    console.log("en reposo izquierda");
+                    salto=false;
+                    player.setVelocityX(-160);
+                    player.setFlipX(true);
+                    player.anims.play('walk',true);
+                }
+            }else if (cursors.right.isDown || moverRight){
+                
+                if(cursors.up.isDown && !player.body.touching.down){
+                    console.log("saltando a la derecha");
+                    player.anims.play('jump');
+                }else if(cursors.down.isDown){
+                    //console.log("quiere caminar agachado");
+                    //player.setVelocityX(160);
+                }else if(player.body.touching.down){
+                    console.log("en reposo derecha");
+                    salto=false;
+                    player.setVelocityX(160);
+                    player.setFlipX(false);
+                    player.anims.play('walk',true);
+                }
+            }
+
+            //////////////////////////////////////////////
+
+            if(cursors.down.isDown || moverDown){
+                if(cursors.right.isDown){
+                    console.log("se agacho y oprimio derecha");
+                    player.setVelocityX(160);
+                    player.setFlipX(false);
+                }else if(cursors.left.isDown){
+                    console.log("se agacho y oprimio izquierda");
+                    player.setVelocityX(-160);
+                    player.setFlipX(true);
+                }else if(player.body.velocity.y<0){
+                    //cuando se agacha y esta saltando
+                }else if(player.body.velocity.y>0){
+                    //cuando se agacha y esta cayend o
+
+                }else{
+                    console.log("se agacho");
+                    player.setVelocityX(0);
+                    //console.log(player.frame.name);
+                    var frame=player.frame.name;
+                    if(frame<18 || frame>20){
+                        player.anims.play('crounch');
+                    }
+                }
+            }
+
+        }
+//*/
+        
+    </script>
+</body>
+</html>
