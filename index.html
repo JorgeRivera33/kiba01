@@ -12,18 +12,17 @@
 <body>
     <script type="text/javascript">
         var player;
-        var stars;
-        var bombs;
-        var platforms;
-        var cursors;
-        var score = 0;
-        var gameOver = false;
-        var scoreText;
-        ///
+
         var salto=false;
         var moverLeft=false;
         var moverRight=false;
         var moverDown=false;
+
+        var mapa;
+        var arriba,derecha,izquierda,abajo;
+
+        const velocidad=200;
+        const alturaSalto=-530;
 
         var config = {
             type: Phaser.AUTO,
@@ -37,7 +36,7 @@
             physics: {
                 default: 'arcade',
                 arcade: {
-                    gravity: { y: 430 },
+                    gravity: { y: 1000 },
                     debug: false
                 }
             },
@@ -54,33 +53,34 @@
         var game = new Phaser.Game(config);
 
         function preload(){
-            this.load.image('plat','assets/plat.png');
-            this.load.image('fondo','assets/sky2.png');
+            this.load.image('fondo','assets/fondo1.png');
+            this.load.image('tiles','assets/mapap.png');
             this.load.image('fulls','assets/fulls.png');
             this.load.image('flecha','assets/flecha.png');
             this.load.image('botona','assets/btn_a.png');
             this.load.image('botonb','assets/btn_b.png');
             this.load.image('botonx','assets/btn_x.png');
             this.load.image('botony','assets/btn_y.png');
-            this.load.image('ground', 'assets/platform.png');
+            this.load.tilemapTiledJSON('mapa','assets/mapa.json');
             this.load.spritesheet('kiba','assets/Kiba_Sprite_Sheet.png',{frameWidth:40.8,frameHeight:53.25});
         }
         function create(){
-            /*Colocamos el fondo*/
-            this.add.image(0,-40,'fondo').setOrigin(0,0);
-
-            /*agregamos las plataformas*/
-            platforms = this.physics.add.staticGroup();
-            platforms.create(400, 360, 'ground').setScale(2).setAlpha(0).refreshBody();
-            platforms.create(0,227,'plat').setOrigin(0,0).refreshBody();
-            platforms.create(255,106,'plat').setOrigin(0,0).refreshBody();
-            platforms.create(540,200,'plat').setOrigin(0,0).refreshBody();
-
+            //fondo
+            this.add.image(0,0,'fondo').setOrigin(0,0).setScale(0.4);
+            this.add.image(1350,0,'fondo').setOrigin(0,0).setScale(0.4);
+            this.add.image(2700,0,'fondo').setOrigin(0,0).setScale(0.4);
+            //mapa
+            mapa=this.make.tilemap({key:'mapa'});
+            var mimapa=mapa.addTilesetImage('mimapa','tiles');
+            mapa.createLayer('elementos',mimapa,0,0);
+            var solidos=mapa.createLayer('solidos',mimapa,0,0);
+            solidos.setCollisionByProperty({solido:true});
+            //player
             /*Colocamos el player*/
-            player=this.physics.add.sprite(50,200,'kiba_stance',0);
+            player=this.physics.add.sprite(50,0,'kiba_stance',0);
             player.setSize(40.8,50);
             player.setOffset(1,0);
-            player.setCollideWorldBounds(true);
+           // player.setCollideWorldBounds(true);
 
             this.anims.create({
                 key: "stance",
@@ -91,7 +91,7 @@
             this.anims.create({
                 key: "walk",
                 repeat: -1,
-                frameRate: 5,
+                frameRate: 10,
                 frames: this.anims.generateFrameNames('kiba',{start:6,end:11})
             });
             this.anims.create({
@@ -121,12 +121,15 @@
             player.play('stance');
 
             /*detectamos el teclado*/
-            cursors = this.input.keyboard.createCursorKeys();
-
-            /*Detectamos la colision con las plataformas*/
-            this.physics.add.collider(player, platforms);
-            //this.physics.add.collider(stars, platforms);
-            //this.physics.add.collider(bombs, platforms);
+            arriba = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+            izquierda = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+            derecha = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+            abajo = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+            //colision
+            this.physics.add.collider(player,solidos);
+            //camara
+            this.cameras.main.setBounds(0, 0, (mapa.widthInPixels), mapa.heightInPixels);
+            this.cameras.main.startFollow(player);
 
             /*creamos los controles*/
             var btn_up=this.add.image(57,326,'flecha').setAlpha(0.7).setScale(0.7).setInteractive();
@@ -153,7 +156,7 @@
             btn_down.on('pointerout', function(event){moverDown=false;});
             btn_down.on('pointerover', function(event){moverDown=true;});
 
-            btn_y.on('pointerdown',function(pointer){salto=true;});
+            btn_y.on('pointerdown',function(pointer){salto=true;console.log("salto");});
 
             /*agregamos el boton fullscreen*/
             var fulls=this.add.image(705,25,'fulls').setScale(0.7).setAlpha(0.7).setInteractive();
@@ -166,99 +169,58 @@
                     this.scale.startFullscreen();
                 }
             }, this);
-
         }
 
-        //function update(){}
-       // /*
         function update(){
-            
-            if(player.body.velocity.y<0){
-                console.log("subiendo");
-                player.anims.play('jump');
-                if (cursors.left.isDown || moverLeft){
-                    player.setVelocityX(-160);
-                }else if(cursors.right.isDown || moverRight){
-                    player.setVelocityX(160);
-                }
-            }
+            player.body.setVelocityX(0);
 
-            if(player.body.velocity.y>0){
-                console.log("bajando");
-                player.anims.play('caer');
-                if (cursors.left.isDown || moverLeft){
-                    player.setVelocityX(-160);
-                }else if(cursors.right.isDown || moverRight){
-                    player.setVelocityX(160);
-                }
-            }
-
-            if (cursors.up.isDown || salto){
-                if(player.body.touching.down){
-                    console.log("oprimio saltar");
-                    player.setVelocityY(-330);
-                }
-            }
-
-            if(player.body.touching.down && !cursors.left.isDown && !cursors.right.isDown && !cursors.down.isDown && !moverRight && !moverLeft && !moverDown){
-                salto=false;
-                console.log("en reposo para saltar");
-                player.anims.play("stance",true);
-                player.setVelocityX(0);
-            }
-
-            ///////////////////////////////////////
-
-            if (cursors.left.isDown || moverLeft){
-                
-                if(cursors.up.isDown && !player.body.touching.down){
-                    console.log("saltando a la izquierda");
+            if (izquierda.isDown || moverLeft){
+                if(arriba.isDown && !player.body.onFloor()){
+                    //console.log("saltando a la izquierda");
                     player.anims.play('jump');
-                }else if(cursors.down.isDown){
+                }else if(abajo.isDown){
                     //console.log("quiere caminar agachado");
                     //player.setVelocityX(-160);
-                }else if(player.body.touching.down){
-                    console.log("en reposo izquierda");
+                }else if(player.body.onFloor()){
+                    //console.log("en reposo izquierda");
                     salto=false;
-                    player.setVelocityX(-160);
+                    player.setVelocityX(-velocidad);
                     player.setFlipX(true);
                     player.anims.play('walk',true);
                 }
-            }else if (cursors.right.isDown || moverRight){
-                
-                if(cursors.up.isDown && !player.body.touching.down){
-                    console.log("saltando a la derecha");
+            }
+
+            if (derecha.isDown || moverRight){
+                if(arriba.isDown && !player.body.onFloor()){
+                    //console.log("saltando a la derecha");
                     player.anims.play('jump');
-                }else if(cursors.down.isDown){
+                }else if(abajo.isDown){
                     //console.log("quiere caminar agachado");
                     //player.setVelocityX(160);
-                }else if(player.body.touching.down){
-                    console.log("en reposo derecha");
+                }else if(player.body.onFloor()){
+                    //console.log("en reposo derecha");
                     salto=false;
-                    player.setVelocityX(160);
+                    player.setVelocityX(velocidad);
                     player.setFlipX(false);
                     player.anims.play('walk',true);
                 }
             }
 
-            //////////////////////////////////////////////
-
-            if(cursors.down.isDown || moverDown){
-                if(cursors.right.isDown){
-                    console.log("se agacho y oprimio derecha");
-                    player.setVelocityX(160);
+            if(abajo.isDown || moverDown){
+                if(derecha.isDown){
+                    //console.log("se agacho y oprimio derecha");
+                    player.setVelocityX(velocidad);
                     player.setFlipX(false);
-                }else if(cursors.left.isDown){
-                    console.log("se agacho y oprimio izquierda");
-                    player.setVelocityX(-160);
+                }else if(izquierda.isDown){
+                    //console.log("se agacho y oprimio izquierda");
+                    player.setVelocityX(-velocidad);
                     player.setFlipX(true);
                 }else if(player.body.velocity.y<0){
                     //cuando se agacha y esta saltando
                 }else if(player.body.velocity.y>0){
                     //cuando se agacha y esta cayend o
-
                 }else{
-                    console.log("se agacho");
+                    //console.log("se agacho");
                     player.setVelocityX(0);
                     //console.log(player.frame.name);
                     var frame=player.frame.name;
@@ -268,9 +230,41 @@
                 }
             }
 
+            if(player.body.velocity.y<0){
+                //console.log("subiendo");
+                player.anims.play('jump');
+                if (izquierda.isDown || moverLeft){
+                    player.setVelocityX(-velocidad);
+                }else if(derecha.isDown || moverRight){
+                    player.setVelocityX(velocidad);
+                }
+            }
+
+            if(player.body.velocity.y>0){
+                //console.log("bajando");
+                player.anims.play('caer');
+                if (izquierda.isDown || moverLeft){
+                    player.setVelocityX(-velocidad);
+                }else if(derecha.isDown || moverRight){
+                    player.setVelocityX(velocidad);
+                }
+            }
+
+            if (arriba.isDown || salto){
+                console.log("a");
+                if(player.body.onFloor()){
+                    console.log("oprimio saltar");
+                    player.setVelocityY(alturaSalto);
+                }
+            }
+
+            if(player.body.onFloor() && !izquierda.isDown && !derecha.isDown && !abajo.isDown && !moverRight && !moverLeft && !moverDown){
+                salto=false;
+                //console.log("en reposo para saltar");
+                player.anims.play("stance",true);
+            }
+
         }
-//*/
-        
     </script>
 </body>
 </html>
